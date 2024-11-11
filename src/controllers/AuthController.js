@@ -16,11 +16,7 @@ export const registerUser = async (req, res) => {
 
   try {
     const endpointURL = `${process.env.WORKER_URL}/api/register`
-    const request = {
-      first_name: first_name,
-      username: username,
-      password: password
-    }
+    const request = { first_name, username, password }
 
     const response = await axios.post(endpointURL, request)
 
@@ -29,7 +25,7 @@ export const registerUser = async (req, res) => {
     console.error('Error from Worker service:', err.message)
 
     try {
-      const result = await User.registerUser({ username, email: username, password })
+      const result = await User.createUser({ username, email: username, password })
 
       if (result.error) {
         return res.status(500).json({ error: result.error })
@@ -45,6 +41,7 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
   const { username, password } = req.body
+
   const { error } = loginUserSchema.validate({ username, password })
 
   if (error) {
@@ -55,10 +52,7 @@ export const loginUser = async (req, res) => {
 
   try {
     const endpointURL = `${process.env.WORKER_URL}/api/login`
-    const request = {
-      username: username,
-      password: password
-    }
+    const request = { username, password }
 
     const response = await axios.post(endpointURL, request)
 
@@ -85,5 +79,22 @@ export const loginUser = async (req, res) => {
       console.error('Database authentication error:', dbErr.message)
       return res.status(500).json({ error: 'Something went wrong during login.' })
     }
+  }
+}
+
+export const deleteUser = async (req, res) => {
+  const { username } = req.params
+
+  try {
+    const result = await User.deleteUser(username)
+
+    if (result.error) {
+      return res.status(500).json({ error: result.error })
+    }
+
+    return res.json({ success: true, message: 'User deleted successfully' })
+  } catch (err) {
+    console.error('Error deleting user:', err.message)
+    return res.status(500).json({ error: 'Something went wrong during deletion.' })
   }
 }

@@ -42,6 +42,36 @@ class User {
       return { error: error.message }
     }
   }
+
+  static async createUser ({ username, email, password }) {
+    try {
+      const salt = await bcrypt.genSalt(saltRounds)
+      const hashedPassword = await bcrypt.hash(password, salt)
+
+      await pool.query(`
+        INSERT INTO users(username, email, password)
+        VALUES ($1, $2, $3);
+      `, [username, email, hashedPassword])
+
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31mOcurrió un error: ${error}\x1b[0m`)
+      return { error: error.message }
+    }
+  }
+
+  static async deleteUser (userId) {
+    try {
+      await pool.query(`
+        DELETE FROM users WHERE id=$1;
+      `, [userId])
+
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31mOcurrió un error: ${error}\x1b[0m`)
+      return { error: error.message }
+    }
+  }
 }
 
 export default User
