@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  gateway:
+    build: .
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - KAFKA_SERVER=${KAFKA_SERVER}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - WORKER_URL=${WORKER_URL}
+      - GRPC_HOST=${GRPC_HOST}
+      - PORT=${PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    depends_on:
+      - redis
+      - kafka
+      - postgres
+    ports:
+      - "3005:3000"
+    restart: always
+
+  kafka:
+    image: mcjesus/kafka:alpine1.0
+    environment:
+      - ZOOKEEPER_SERVER=zookeeper
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ADVERTISED_LISTENER=localhost
+      - KAFKA_LISTENER_SECURITY_PROTOCOL=PLAINTEXT
+      - KAFKA_LISTENER_NAME=PLAINTEXT
+    ports:
+      - "9092:9092"
+    command: >
+      /kafka_2.13-3.8.0/bin/kafka-topics.sh --create --bootstrap-server kafka --topic tiksup-user-data --partitions 1 --replication-factor 1
+
+  # Redis for caching
+  redis:
+    image: redis:7.4.0-alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:17.0-alpine3.20
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"

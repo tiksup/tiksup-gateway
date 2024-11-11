@@ -1,0 +1,191 @@
+import { dbConnectionPg } from '../../config/config'
+import bcrypt from 'bcrypt'
+
+const saltRounds = 10
+
+export class User {
+  /**
+   * Obtiene todos los usuarios de la base de datos.
+   * @returns {Promise<Object[]|{error:string}>} Una promesa que resuelve en una lista de objetos que representan a los usuarios, o un objeto de error si ocurre algún problema.
+   */
+  static async getAll () {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      const { rows } = await connection.query('SELECT * FROM users')
+      return rows
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Encuentra un usuario por su nombre de usuario en la base de datos y verifica su contraseña.
+   * @param {Object} options - Las opciones para encontrar al usuario.
+   * @param {Object} options.data - Los datos del usuario para buscar.
+   * @param {string} options.data.username - El nombre de usuario del usuario que se desea encontrar.
+   * @param {string} options.data.password - La contraseña del usuario que se desea verificar.
+   * @returns {Promise<Object|null|{error:string}>} Una promesa que resuelve en un objeto que representa al usuario encontrado, o nulo si no se encuentra ningún usuario con el nombre de usuario dado, o un objeto de error si ocurre algún problema.
+   */
+  static async findByName ({ data }) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      const { rows } = await connection.query(
+        'SELECT id, username, is_admin, is_staff, password FROM users WHERE username=$1 OR email=$1;',
+        [data.username]
+      )
+      if (rows.length === 0) return null
+
+      const comparePassword = await bcrypt.compare(data.password, rows[0].password)
+      if (!comparePassword) return null
+
+      return rows[0]
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Encuentra un usuario por su ID en la base de datos, junto con su perfil asociado.
+   * @param {number} user_id - El ID del usuario que se desea encontrar.
+   * @returns {Promise<Object|null|{error:string}>} Una promesa que resuelve en un objeto que representa al usuario encontrado con su perfil asociado, o nulo si no se encuentra ningún usuario con el ID dado, o un objeto de error si ocurre algún problema.
+   */
+  static async findUser (user_id) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      const { rows } = await connection.query(
+        'SELECT users.id, users.username, users.first_name, users.last_name, profile.profile_image, profile.description FROM users JOIN profile ON users.id=profile.user_id WHERE users.id=$1;',
+        [user_id]
+      )
+      if (rows.length === 0) return null
+      return rows[0]
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Crea un nuevo usuario en la base de datos.
+   * @param {Object} options - Las opciones para crear el usuario.
+   * @param {Object} options.data - Los datos del usuario para crear.
+   * @returns {Promise<boolean|{error:string}>} Una promesa que resuelve en verdadero si el usuario se crea exitosamente, o un objeto de error si ocurre algún problema.
+   */
+  static async createUser ({ data }) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      const salt = await bcrypt.genSalt(saltRounds)
+      const hash = await bcrypt.hash(data.password, salt)
+      await connection.query(
+        'INSERT INTO users(username, first_name, last_name, email, password) VALUES ($1, $2, $3, $4, $5);',
+        [data.username, data.first_name, data.last_name, data.email, hash]
+      )
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Elimina un usuario de la base de datos según su ID.
+   * @param {number} id - El ID del usuario que se desea eliminar.
+   * @returns {Promise<boolean|{error:string}>} Una promesa que resuelve en verdadero si el usuario se elimina exitosamente, o un objeto de error si ocurre algún problema.
+   */
+  static async deleteUser (id) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      await connection.query('DELETE FROM users WHERE id=$1', [id])
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Edita un usuario en la base de datos según su ID.
+   * @param {Object} options - Las opciones para editar el usuario.
+   * @param {number} options.id - El ID del usuario que se desea editar.
+   * @param {Object} options.data - Los nuevos datos del usuario.
+   * @returns {Promise<boolean|{error:string}>} Una promesa que resuelve en verdadero si el usuario se edita exitosamente, o un objeto de error si ocurre algún problema.
+   */
+  static async editUser ({ id, data }) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      await connection.query(
+        'UPDATE users SET first_name=$1, last_name=$2 WHERE id=$3',
+        [data.first_name, data.last_name, id]
+      )
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Crea un nuevo perfil para un usuario en la base de datos.
+   * @param {number} user_id - El ID del usuario para el cual se creará el perfil.
+   * @param {Object} data - Los datos del perfil a crear.
+   * @returns {Promise<boolean|{error:string}>} Una promesa que resuelve en verdadero si el perfil se crea exitosamente, o un objeto de error si ocurre algún problema.
+   */
+  static async createProfile ({ user_id, data }) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      await connection.query(
+        'INSERT INTO profile(user_id, description, profile_image) VALUES ($1, $2, $3);',
+        [user_id, data.description, data.profile_image]
+      )
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+
+  /**
+   * Edita el perfil de un usuario en la base de datos.
+   * @param {number} user_id - El ID del usuario cuyo perfil se desea editar.
+   * @param {Object} data - Los nuevos datos del perfil.
+   * @returns {Promise<boolean|{error:string}>} Una promesa que resuelve en verdadero si el perfil se edita exitosamente, o un objeto de error si ocurre algún problema.
+   */
+  static async editProfile ({ user_id, data }) {
+    let connection = null
+    try {
+      connection = await dbConnectionPg()
+      await connection.query(
+        'UPDATE profile SET description=$1, profile_image=$2 WHERE user_id=$3',
+        [data.description, data.profile_image, user_id]
+      )
+      return { success: true }
+    } catch (error) {
+      console.error(`\x1b[31man error occurred ${error}\x1b[0m`)
+      return { error: error.message }
+    } finally {
+      if (connection) connection.release()
+    }
+  }
+}
