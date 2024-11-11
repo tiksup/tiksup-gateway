@@ -1,6 +1,6 @@
-// const { authClient } = require('../services/GrpcService');
 import axios from 'axios'
 import { registerUserSchema, loginUserSchema } from '../schemas/UserSchema.js'
+import { User } from '../models/authModel.js'
 import 'dotenv/config'
 
 export const registerUser = async (req, res) => {
@@ -13,6 +13,7 @@ export const registerUser = async (req, res) => {
       error: error.details[0].message.replace(/"/g, '')
     })
   }
+
   try {
     const endpointURL = `${process.env.WORKER_URL}/api/register`
     const request = {
@@ -20,11 +21,25 @@ export const registerUser = async (req, res) => {
       username: username,
       password: password
     }
+
     const response = await axios.post(endpointURL, request)
 
-    res.json({ success: true, data: response.data })
+    return res.json({ success: true, data: response.data })
   } catch (err) {
-    res.status(500).json(err.response.data)
+    console.error('Error from Worker service:', err.message)
+
+    try {
+      const result = await User.registerUser({ username, email: username, password })
+
+      if (result.error) {
+        return res.status(500).json({ error: result.error })
+      }
+
+      return res.json({ success: true })
+    } catch (dbErr) {
+      console.error('Database registration error:', dbErr.message)
+      return res.status(500).json({ error: 'Something went wrong during registration.' })
+    }
   }
 }
 
@@ -34,12 +49,12 @@ export const loginUser = async (req, res) => {
 
   if (error) {
     return res.status(400).json({
-      serror: error.details[0].message.replace(/"/g, '')
+      error: error.details[0].message.replace(/"/g, '')
     })
   }
+
   try {
     const endpointURL = `${process.env.WORKER_URL}/api/login`
-
     const request = {
       username: username,
       password: password
@@ -47,11 +62,28 @@ export const loginUser = async (req, res) => {
 
     const response = await axios.post(endpointURL, request)
 
-    res.json(response.data)
+    return res.json(response.data)
   } catch (err) {
-    if (err.response.status === 401) {
+    if (err.response && err.response.status === 401) {
       return res.status(401).json(err.response.data)
     }
-    return res.status(500).json({ error: 'Something wrong' })
+
+    console.error('Error from Worker service:', err.message)
+
+    try {
+      const user = await User.findByNameAndPassword({ usernameOrEmail: username, password })
+
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username or password' })
+      }
+
+      return res.json({
+        success: true,
+        user
+      })
+    } catch (dbErr) {
+      console.error('Database authentication error:', dbErr.message)
+      return res.status(500).json({ error: 'Something went wrong during login.' })
+    }
   }
 }
