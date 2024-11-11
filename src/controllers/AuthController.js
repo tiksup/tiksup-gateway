@@ -1,12 +1,12 @@
 import axios from 'axios'
 import { registerUserSchema, loginUserSchema } from '../schemas/UserSchema.js'
-import { User } from '../models/authModel.js'
+import User from '../models/authModel.js'
 import 'dotenv/config'
 
 export const registerUser = async (req, res) => {
-  const { first_name, username, password } = req.body
+  const { first_name, last_name, username, email, password } = req.body
 
-  const { error } = registerUserSchema.validate({ first_name, username, password })
+  const { error } = registerUserSchema.validate({ first_name, last_name, username, email, password })
 
   if (error) {
     return res.status(400).json({
@@ -16,7 +16,7 @@ export const registerUser = async (req, res) => {
 
   try {
     const endpointURL = `${process.env.WORKER_URL}/api/register`
-    const request = { first_name, username, password }
+    const request = { first_name, last_name, username, email, password }
 
     const response = await axios.post(endpointURL, request)
 
@@ -25,7 +25,7 @@ export const registerUser = async (req, res) => {
     console.error('Error from Worker service:', err.message)
 
     try {
-      const result = await User.createUser({ username, email: username, password })
+      const result = await User.registerUser({ username, email: username, password })
 
       if (result.error) {
         return res.status(500).json({ error: result.error })
@@ -83,10 +83,10 @@ export const loginUser = async (req, res) => {
 }
 
 export const deleteUser = async (req, res) => {
-  const { username } = req.params
+  const { userId } = req.params
 
   try {
-    const result = await User.deleteUser(username)
+    const result = await User.deleteUser(userId)
 
     if (result.error) {
       return res.status(500).json({ error: result.error })
