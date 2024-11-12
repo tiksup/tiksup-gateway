@@ -1,9 +1,11 @@
 import { Router } from 'express'
-import { registerUser, loginUser } from '../controllers/AuthController.js'
+import { registerUser, loginUser, deleteUser } from '../controllers/AuthController.js'
+import { authMiddleware } from '../middlewares/authentication.js'
 
 const router = Router()
 
-router.post('/login', loginUser)
-router.post('/register', registerUser)
+router.post('/login', authMiddleware, loginUser)
+router.post('/register', authMiddleware, registerUser)
+router.delete('/delete/:userId', authMiddleware, deleteUser)
 
 export default router
