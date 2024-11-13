@@ -1,5 +1,6 @@
 import { loginUserSchema, userValidation } from '../schemas/UserSchema.js'
 import User from '../models/authModel.js'
+import { generateToken } from '../config/jwt'
 import 'dotenv/config'
 
 export const registerUser = async (req, res) => {
@@ -22,7 +23,9 @@ export const registerUser = async (req, res) => {
       return res.status(500).json({ error: result.error })
     }
 
-    return res.json({ success: true, data: result })
+    // Generamos el token JWT para el usuario recién registrado
+    const token = generateToken({ id: result.id, username: result.username })
+    return res.json({ success: true, token })
   } catch (dbErr) {
     console.error('Database registration error:', dbErr.message)
     return res.status(500).json({ error: 'Something went wrong during registration.' })
@@ -42,17 +45,16 @@ export const loginUser = async (req, res) => {
   }
 
   try {
-    // Usamos la función findByNameAndPassword del modelo User
-    const user = await User.findByUsernameAndPassword({ usernameOrEmail: username, password })
+    // Autenticamos al usuario
+    const user = await User.findByNameAndPassword({ usernameOrEmail: username, password })
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid username or password' })
     }
 
-    return res.json({
-      success: true,
-      user
-    })
+    // Generación del token JWT
+    const token = generateToken({ id: user.id, username: user.username })
+    return res.json({ success: true, token })
   } catch (dbErr) {
     console.error('Database authentication error:', dbErr.message)
     return res.status(500).json({ error: 'Something went wrong during login.' })
@@ -64,7 +66,7 @@ export const deleteUser = async (req, res) => {
 
   try {
     // Usamos la función deleteUser del modelo User
-    const result = await User.deleteUserById(userId)
+    const result = await User.deleteUser(userId)
 
     if (result.error) {
       return res.status(500).json({ error: result.error })

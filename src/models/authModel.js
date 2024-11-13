@@ -1,4 +1,4 @@
-import { dbConnectionPg } from '../../config/config.js'
+import { dbConnectionPg } from '../config/postgres'
 import { Pool } from 'pg'
 import bcrypt from 'bcrypt'
 

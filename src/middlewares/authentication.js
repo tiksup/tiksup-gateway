@@ -1,4 +1,4 @@
-import { validateToken } from '../config/config'
+import { validateToken } from '../config/jwt'
 
 export const authMiddleware = (req, res, next) => {
   try {
