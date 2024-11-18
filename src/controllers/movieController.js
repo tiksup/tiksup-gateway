@@ -1,23 +1,25 @@
 import { client } from '../config/redis.js'
-import axios from 'axios'
 import 'dotenv/config'
+import { mongoConnection } from '../config/mongo.js'
 
 export const getMovies = async (req, res) => {
+  const mongoClient = await mongoConnection()
   try {
-    const recommendationsString = await client.get(`user:${decodedToken.user_id}:recommendations`)
+    const recommendationsString = await client.get(`user:${req.authUser.id}:recommendations`)
     const recommendations = JSON.parse(recommendationsString)
     if (!recommendations || recommendations.movies.length === 0) {
       console.log('Using random data')
+      const collection = mongoClient.collection('movies')
 
-      const endpointURL = `${process.env.WORKER_URL}/random-movies`
+      const randomMovies = await collection.aggregate([
+        { $sample: { size: 15 } }
+      ]).toArray()
 
-      const randomMovies = await axios.get(endpointURL, {
-        headers: {
-          Authorization: authHeader
-        }
-      })
-
-      return res.json(randomMovies.data)
+      const response = {
+        user: req.authUser.id,
+        movies: randomMovies
+      }
+      return res.json(response)
     }
 
     res.json(recommendations)

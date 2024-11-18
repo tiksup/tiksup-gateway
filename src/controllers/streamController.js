@@ -25,7 +25,7 @@ export const postUserMovieData = async (req, res) => {
       movie_id: value.movie_id,
       watching_time: value.watching_time,
       watching_repeat: value.watching_repeat,
-      data: value.data,
+      interactions: value.data,
       next
     }
 
