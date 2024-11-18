@@ -1,7 +1,7 @@
 import Joi from 'joi'
 
 export const streamDataSchema = Joi.object({
-  user_id: Joi.string().required(),
+  user_id: Joi.number().required(),
   movie_id: Joi.string().required(),
   watching_time: Joi.number().required(),
   watching_repeat: Joi.number().required(),

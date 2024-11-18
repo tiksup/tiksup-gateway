@@ -1,5 +1,5 @@
 import express, { json } from 'express'
-import routesLoader from './routes/Loader.js'
+import routesLoader from './routes/loader.js'
 import { initProductor } from './config/kafka.js'
 import cors from 'cors'
 import 'dotenv/config'

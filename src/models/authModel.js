@@ -1,19 +1,19 @@
-import { dbConnectionPg } from '../config/postgres'
-import { Pool } from 'pg'
+import { dbConnectionPg } from '../config/postgres.js'
 import bcrypt from 'bcrypt'
-
-const pool = new Pool(dbConnectionPg)
 
 const saltRounds = 10
 
 class User {
   static async findByNameAndPassword ({ usernameOrEmail, password }) {
+    let connection
     try {
-      const { rows } = await pool.query(`
-        SELECT id, username, email, first_name, last_name, password
+      connection = await dbConnectionPg()
+
+      const { rows } = await connection.query(`
+        SELECT id, username, password
         FROM users 
-        WHERE username=$1 OR email=$1;
-      `, [usernameOrEmail])
+        WHERE username=$1 OR email=$1;`,
+      [usernameOrEmail])
 
       if (rows.length === 0) return null
 
@@ -22,38 +22,31 @@ class User {
 
       return rows[0]
     } catch (error) {
-      console.error(`\x1b[31mOcurrió un error: ${error}\x1b[0m`)
+      console.error(`\x1b[31mAn error occurred: ${error}\x1b[0m`)
       return { error: error.message }
+    } finally {
+      if (connection) connection.release()
     }
   }
 
-  static async registerUser ({ username, email, password, first_name, last_name }) {
+  static async registerUser ({ first_name, username, email, password }) {
+    let connection
     try {
+      connection = await dbConnectionPg()
+
       const salt = await bcrypt.genSalt(saltRounds)
       const hashedPassword = await bcrypt.hash(password, salt)
-
-      await pool.query(`
-        INSERT INTO users(username, email, password, first_name, last_name)
-        VALUES ($1, $2, $3, $4, $5);
-      `, [username, email, hashedPassword, first_name, last_name])
-
-      return { success: true }
-    } catch (error) {
-      console.error(`\x1b[31mOcurrió un error: ${error}\x1b[0m`)
-      return { error: error.message }
-    }
-  }
-
-  static async deleteUser (userId) {
-    try {
-      await pool.query(`
-        DELETE FROM users WHERE id=$1;
-      `, [userId])
+      await connection.query(`
+        INSERT INTO users(first_name, username, email, password)
+        VALUES ($1, $2, $3, $4);`,
+      [first_name, username, email, hashedPassword])
 
       return { success: true }
     } catch (error) {
-      console.error(`\x1b[31mOcurrió un error: ${error}\x1b[0m`)
+      console.error(`\x1b[31mAn error occurred: ${error}\x1b[0m`)
       return { error: error.message }
+    } finally {
+      if (connection) connection.release()
     }
   }
 }

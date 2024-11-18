@@ -1,4 +1,4 @@
-import { validateToken } from '../config/jwt'
+import { validateToken } from '../config/jwt.js'
 
 export const authMiddleware = (req, res, next) => {
   try {
@@ -16,5 +16,3 @@ export const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: err.message })
   }
 }
-
-module.exports = authMiddleware
