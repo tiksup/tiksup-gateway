@@ -12,7 +12,13 @@ export const getMovies = async (req, res) => {
       const collection = mongoClient.collection('movies')
 
       const randomMovies = await collection.aggregate([
-        { $sample: { size: 15 } }
+        { $sample: { size: 15 } },
+        {
+          $project: {
+            id: "$_id",
+            _id: 0,
+          }
+        }
       ]).toArray()
 
       const response = {
