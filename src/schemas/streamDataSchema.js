@@ -5,7 +5,7 @@ export const streamDataSchema = Joi.object({
   movie_id: Joi.string().required(),
   watching_time: Joi.number().required(),
   watching_repeat: Joi.number().required(),
-  data: Joi.object({
+  interactions: Joi.object({
     genre: Joi.array().items(
       Joi.string()
     ).required(),

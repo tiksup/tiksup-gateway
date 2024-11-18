@@ -4,13 +4,13 @@ import 'dotenv/config'
 
 export const postUserMovieData = async (req, res) => {
   try {
-    const { movie_id, watching_time, watching_repeat, data, next } = req.body
+    const { movie_id, watching_time, watching_repeat, interactions, next } = req.body
     const { error, value } = streamDataSchema.validate({
       user_id: req.authUser.id,
       movie_id,
       watching_time,
       watching_repeat,
-      data,
+      interactions,
       next
     })
 

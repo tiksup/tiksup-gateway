@@ -17,6 +17,11 @@ export const getMovies = async (req, res) => {
           $project: {
             id: "$_id",
             _id: 0,
+            url: 1,
+            title: 1,
+            genre: 1,
+            protagonist: 1,
+            director: 1,
           }
         }
       ]).toArray()
